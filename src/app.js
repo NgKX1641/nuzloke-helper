@@ -14,19 +14,12 @@ import {
 const STORAGE_KEY = "bw-nuzlocke-helper-state-v2";
 const LEGACY_KEY = "bw-nuzlocke-helper-state-v1";
 const EMPTY_TYPE = "";
-const CAVEATS = [
-  { id: "levitate", label: "Levitate", immuneType: "Ground", note: "Ground moves may fail." },
-  { id: "flashFire", label: "Flash Fire", immuneType: "Fire", note: "Fire moves may be absorbed." },
-  { id: "waterAbsorb", label: "Water Absorb", immuneType: "Water", note: "Water moves may heal the opponent." },
-  { id: "voltAbsorb", label: "Volt Absorb", immuneType: "Electric", note: "Electric moves may heal the opponent." },
-  { id: "sapSipper", label: "Sap Sipper", immuneType: "Grass", note: "Grass moves may boost the opponent." },
-  { id: "airBalloon", label: "Air Balloon", immuneType: "Ground", note: "Ground moves may fail until the item pops." },
-];
 
 const state = {
   team: [],
   opponent: { pokemonName: "", types: [] },
   activeMemberId: "",
+  collapsedTeamCards: {},
   settings: {
     game: "Pokemon Black",
     typesRandomized: false,
@@ -85,7 +78,6 @@ function cacheEls() {
     settingDarkMode: document.querySelector("#setting-dark-mode"),
     activeMember: document.querySelector("#active-member"),
     activeMovePanel: document.querySelector("#active-move-panel"),
-    caveatToggles: document.querySelector("#caveat-toggles"),
     replaceDialog: document.querySelector("#replace-move-dialog"),
     replaceDialogTitle: document.querySelector("#replace-dialog-title"),
     replaceDialogCopy: document.querySelector("#replace-dialog-copy"),
@@ -104,6 +96,7 @@ function loadState() {
     state.settings = { ...state.settings, ...(saved.settings || {}) };
     state.opponent = saved.opponent || state.opponent;
     state.activeMemberId = saved.activeMemberId || "";
+    state.collapsedTeamCards = saved.collapsedTeamCards || {};
     state.team = (saved.team || []).map(normalizeMember).slice(0, 6);
   } catch {
     localStorage.removeItem(STORAGE_KEY);
@@ -210,7 +203,6 @@ function bindEvents() {
 function render() {
   renderSettings();
   renderOpponent();
-  renderCaveats();
   renderTeam();
   renderResults();
 }
@@ -239,28 +231,6 @@ function renderOpponent() {
   els.opponentType2.value = state.opponent.types?.[1] || "";
 }
 
-function renderCaveats() {
-  const enabled = new Set(state.opponent.caveats || []);
-  els.caveatToggles.innerHTML = "";
-  for (const caveat of CAVEATS) {
-    const label = document.createElement("label");
-    label.className = "caveat-toggle";
-    label.innerHTML = `
-      <input type="checkbox" value="${caveat.id}" ${enabled.has(caveat.id) ? "checked" : ""}>
-      <span>${escapeHtml(caveat.label)}</span>
-    `;
-    label.querySelector("input").addEventListener("change", (event) => {
-      const next = new Set(state.opponent.caveats || []);
-      if (event.target.checked) next.add(caveat.id);
-      else next.delete(caveat.id);
-      state.opponent.caveats = [...next];
-      saveState();
-      renderResults();
-    });
-    els.caveatToggles.append(label);
-  }
-}
-
 function renderTeam() {
   els.teamCount.textContent = String(state.team.length);
   els.addTeamMember.disabled = state.team.length >= 6;
@@ -271,6 +241,10 @@ function renderTeam() {
   if (!state.team.length && state.activeMemberId) {
     state.activeMemberId = "";
     saveState();
+  }
+  const currentIds = new Set(state.team.map((member) => member.id));
+  for (const memberId of Object.keys(state.collapsedTeamCards)) {
+    if (!currentIds.has(memberId)) delete state.collapsedTeamCards[memberId];
   }
   els.teamList.innerHTML = "";
   if (!state.team.length) {
@@ -285,6 +259,7 @@ function renderTeam() {
 }
 
 function fillTeamCard(card, member, index) {
+  const details = card.querySelector(".team-details");
   const title = card.querySelector(".team-card-title");
   const meta = card.querySelector(".team-card-meta");
   const name = card.querySelector(".team-name");
@@ -297,6 +272,11 @@ function fillTeamCard(card, member, index) {
   const suggestions = card.querySelector(".suggestion-content");
   const displayName = member.nickname || member.pokemonName || "Pokemon";
 
+  details.open = !state.collapsedTeamCards[member.id];
+  details.addEventListener("toggle", () => {
+    state.collapsedTeamCards[member.id] = !details.open;
+    saveState();
+  });
   selectTextOnFocus(name);
   bindRankedLookup(name, els.pokemonOptions, pokemon, (entry) => entry.name);
   title.textContent = `${index + 1}. ${displayName}`;
@@ -654,7 +634,7 @@ function renderActiveMovePanel() {
         <strong>${escapeHtml(member.nickname || member.pokemonName || "Pokemon")}</strong>
         <p class="muted">No damaging current moves selected.</p>
       </div>
-      ${ranked.status.length ? moveRankingHtml(ranked, state.opponent.caveats || []) : ""}
+      ${ranked.status.length ? moveRankingHtml(ranked) : ""}
     `;
     return;
   }
@@ -664,9 +644,9 @@ function renderActiveMovePanel() {
       <strong>${escapeHtml(best.move.name)}</strong>
       <span>${best.move.type} / ${capitalize(best.move.category)} / ${best.move.power ?? "-"} BP / ${best.move.accuracy ?? "-"}% acc</span>
       <span>${effectivenessLabel(best.typeEffectiveness)}${best.stab ? " / STAB" : ""}${best.move.priority > 0 ? " / priority" : ""}</span>
-      <span>${moveCaveatText(best.move, state.opponent.caveats || [])}Score: ${best.score.toFixed(1)}</span>
+      <span>Score: ${best.score.toFixed(1)}</span>
     </div>
-    ${moveRankingHtml(ranked, state.opponent.caveats || [])}
+    ${moveRankingHtml(ranked)}
   `;
 }
 
@@ -719,13 +699,13 @@ function renderTeamRecommendations() {
         <span class="status-pill ${riskClass(risk.label)}">${risk.label}</span>
       </div>
       <p>${stabSummary(risk.memberStab)} Takes ${incomingSummary(risk.incoming)} from opponent STAB.</p>
-      ${moveRankingHtml(ranked, state.opponent.caveats || [])}
+      ${moveRankingHtml(ranked)}
     `;
     els.teamRecommendations.append(card);
   }
 }
 
-function moveRankingHtml(ranked, caveatIds = []) {
+function moveRankingHtml(ranked) {
   if (!ranked.damaging.length && !ranked.status.length) {
     return '<p class="muted">No current moves selected. Add moves in My Team to rank actual options.</p>';
   }
@@ -734,7 +714,7 @@ function moveRankingHtml(ranked, caveatIds = []) {
       <strong>${index + 1}. ${escapeHtml(result.move.name)}</strong>
       <span>${result.move.type} / ${capitalize(result.move.category)} / ${result.move.power ?? "-"} BP / ${result.move.accuracy ?? "-"}% acc</span>
       <span>${effectivenessLabel(result.typeEffectiveness)}${result.stab ? " / STAB" : ""}${result.move.priority > 0 ? " / priority" : ""}</span>
-      <span>${result.typeEffectiveness === 0 ? "Immune. " : ""}${moveCaveatText(result.move, caveatIds)}Score: ${result.score.toFixed(1)}</span>
+      <span>${result.typeEffectiveness === 0 ? "Immune. " : ""}Score: ${result.score.toFixed(1)}</span>
     </li>
   `).join("");
   const status = ranked.status.map((result) => `
@@ -752,17 +732,8 @@ function moveRankingHtml(ranked, caveatIds = []) {
   `;
 }
 
-function moveCaveatText(move, caveatIds) {
-  const blocked = CAVEATS.find((caveat) => caveatIds.includes(caveat.id) && caveat.immuneType === move.type);
-  return blocked ? `May be blocked by ${blocked.label}. ` : "";
-}
-
 function renderWarnings() {
   const warnings = [];
-  const activeCaveats = CAVEATS.filter((caveat) => (state.opponent.caveats || []).includes(caveat.id));
-  for (const caveat of activeCaveats) {
-    warnings.push(`${caveat.label}: ${caveat.note}`);
-  }
   for (const member of state.team) {
     const name = member.nickname || member.pokemonName || "Pokemon";
     const risk = teamRisk(member, state.opponent, typeChart);
@@ -785,10 +756,6 @@ function renderWarnings() {
     }
     if (risk.memberStab.length && risk.memberStab.every((entry) => entry.multiplier < 1)) {
       warnings.push(`Opponent resists both of ${name}'s STAB types.`);
-    }
-    for (const selectedMove of member.moves || []) {
-      const blocked = activeCaveats.find((caveat) => caveat.immuneType === selectedMove.type);
-      if (blocked) warnings.push(`${name}'s ${selectedMove.name} may be blocked by ${blocked.label}.`);
     }
     const validation = validateMember(member, moveMap, learnsets, state.settings.movesRandomized);
     warnings.push(...validation.warnings.map((warning) => `${name}: ${warning}`));

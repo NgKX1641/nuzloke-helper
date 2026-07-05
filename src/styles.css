@@ -331,34 +331,10 @@ textarea {
   margin: 0;
 }
 
-.caveat-panel,
 .active-pokemon-panel {
   margin-top: 1rem;
   border-top: 1px solid var(--line);
   padding-top: 0.85rem;
-}
-
-.caveat-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-top: 0.65rem;
-}
-
-.caveat-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: auto;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--button-muted-bg);
-  color: var(--text);
-  padding: 0.35rem 0.55rem;
-}
-
-.caveat-toggle input {
-  width: auto;
 }
 
 .active-pokemon-panel {
