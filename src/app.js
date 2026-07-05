@@ -117,7 +117,7 @@ function loadState() {
   try {
     const saved = JSON.parse(raw);
     state.settings = { ...state.settings, ...(saved.settings || {}) };
-    state.opponent = saved.opponent || state.opponent;
+    state.opponent = normalizeOpponent(saved.opponent || state.opponent);
     state.activeMemberId = saved.activeMemberId || "";
     state.collapsedTeamCards = saved.collapsedTeamCards || {};
     state.catchSettings = { ...state.catchSettings, ...(saved.catchSettings || {}) };
@@ -145,8 +145,25 @@ function normalizeMember(member = {}) {
   };
 }
 
+function normalizeOpponent(opponent = {}) {
+  const pokemonEntry = pokemonByDex.get(opponent.pokemonId) || pokemonByName.get(normalizeId(opponent.pokemonName));
+  const types = Array.isArray(opponent.types)
+    ? opponent.types.filter(Boolean)
+    : [pokemonEntry?.type1, pokemonEntry?.type2].filter(Boolean);
+  return {
+    pokemonName: opponent.pokemonName || pokemonEntry?.name || "",
+    pokemonId: opponent.pokemonId || pokemonEntry?.dex || null,
+    types,
+    level: Math.max(1, Math.min(100, Number(opponent.level) || 5)),
+  };
+}
+
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const saved = {
+    ...state,
+    opponent: normalizeOpponent(state.opponent),
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 }
 
 function optionList(select, includeEmpty = false) {
@@ -188,7 +205,6 @@ function bindEvents() {
       state.opponent.pokemonId = entry.dex;
       state.opponent.pokemonName = entry.name;
       state.opponent.types = [entry.type1, entry.type2].filter(Boolean);
-      state.opponent.captureRate = captureRateByPokemonId.get(entry.dex) ?? null;
     }
     saveState();
     render();
@@ -267,9 +283,6 @@ function renderOpponent() {
   els.opponentType1.value = state.opponent.types?.[0] || "Normal";
   els.opponentType2.value = state.opponent.types?.[1] || "";
   els.opponentLevel.value = state.opponent.level || 5;
-  if (state.opponent.pokemonId && state.opponent.captureRate == null) {
-    state.opponent.captureRate = captureRateByPokemonId.get(state.opponent.pokemonId) ?? null;
-  }
   renderCatchSettings();
 }
 
@@ -697,7 +710,7 @@ function renderActiveMemberControls() {
 }
 
 function renderCatchCalculator() {
-  const captureRate = state.opponent.captureRate ?? captureRateByPokemonId.get(state.opponent.pokemonId);
+  const captureRate = captureRateByPokemonId.get(state.opponent.pokemonId);
   if (!captureRate) {
     els.catchResults.innerHTML = '<p class="empty-state">No capture-rate data for this opponent.</p>';
     return;
