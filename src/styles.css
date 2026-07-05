@@ -370,13 +370,17 @@ textarea {
 
 .catch-row {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   gap: 0.65rem;
   align-items: start;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0.55rem;
   background: var(--subtle-bg);
+}
+
+.single-catch-row {
+  align-items: stretch;
 }
 
 .catch-ball-list {
@@ -891,7 +895,6 @@ textarea {
   }
 
   .move-details,
-  .replace-move,
   .remove-move {
     grid-column: 2;
   }

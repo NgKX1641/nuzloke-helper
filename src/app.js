@@ -23,6 +23,7 @@ const state = {
   activeMemberId: "",
   collapsedTeamCards: {},
   catchSettings: {
+    hpPercent: 25,
     statusBonus: 1,
     turn: 1,
     duskBoost: false,
@@ -83,6 +84,7 @@ function cacheEls() {
     opponentType1: document.querySelector("#opponent-type1"),
     opponentType2: document.querySelector("#opponent-type2"),
     opponentLevel: document.querySelector("#opponent-level"),
+    catchHp: document.querySelector("#catch-hp"),
     catchStatus: document.querySelector("#catch-status"),
     catchTurn: document.querySelector("#catch-turn"),
     catchDusk: document.querySelector("#catch-dusk"),
@@ -207,7 +209,7 @@ function bindEvents() {
     saveState();
     renderResults();
   });
-  for (const element of [els.catchStatus, els.catchTurn, els.catchDusk, els.catchDive, els.catchRepeat]) {
+  for (const element of [els.catchHp, els.catchStatus, els.catchTurn, els.catchDusk, els.catchDive, els.catchRepeat]) {
     element.addEventListener("change", () => {
       saveCatchSettings();
       renderCatchCalculator();
@@ -272,6 +274,7 @@ function renderOpponent() {
 }
 
 function renderCatchSettings() {
+  els.catchHp.value = String(state.catchSettings.hpPercent ?? 25);
   els.catchStatus.value = String(state.catchSettings.statusBonus ?? 1);
   els.catchTurn.value = state.catchSettings.turn ?? 1;
   els.catchDusk.checked = Boolean(state.catchSettings.duskBoost);
@@ -281,12 +284,14 @@ function renderCatchSettings() {
 
 function saveCatchSettings() {
   state.catchSettings = {
+    hpPercent: Number(els.catchHp.value) || 25,
     statusBonus: Number(els.catchStatus.value) || 1,
     turn: Math.max(1, Math.min(99, Number(els.catchTurn.value) || 1)),
     duskBoost: els.catchDusk.checked,
     diveBoost: els.catchDive.checked,
     repeatBoost: els.catchRepeat.checked,
   };
+  els.catchHp.value = String(state.catchSettings.hpPercent);
   els.catchTurn.value = state.catchSettings.turn;
   saveState();
 }
@@ -413,16 +418,17 @@ function renderMoveSlots(container, member, memberIndex) {
         <div class="move-dropdown" role="listbox"></div>
       </label>
       <div class="move-details">${move ? moveDetail(move) : "Empty slot"}</div>
-      <button class="replace-move" type="button">${move ? "Replace" : "Add"}</button>
       <button class="remove-move" type="button">Remove</button>
     `;
     const input = row.querySelector(".move-input");
     const dropdown = row.querySelector(".move-dropdown");
     selectTextOnFocus(input);
     bindMoveDropdown(input, dropdown, memberIndex, slot);
-    const commit = () => setMoveFromInput(memberIndex, slot, input.value);
+    const commit = () => {
+      if (input.dataset.dropdownSelecting === "true") return;
+      setMoveFromInput(memberIndex, slot, input.value);
+    };
     input.addEventListener("change", commit);
-    row.querySelector(".replace-move").addEventListener("click", commit);
     row.querySelector(".remove-move").addEventListener("click", () => {
       state.team[memberIndex].moves.splice(slot, 1);
       saveState();
@@ -524,6 +530,7 @@ function bindMoveDropdown(input, dropdown, memberIndex, slot) {
     if (event.key === "Escape") {
       dropdown.hidden = true;
       input.setAttribute("aria-expanded", "false");
+      delete input.dataset.dropdownSelecting;
     }
     if (event.key === "Enter" && !dropdown.hidden) {
       const first = dropdown.querySelector(".move-dropdown-option");
@@ -537,6 +544,7 @@ function bindMoveDropdown(input, dropdown, memberIndex, slot) {
     if (!dropdown.contains(event.target) && event.target !== input) {
       dropdown.hidden = true;
       input.setAttribute("aria-expanded", "false");
+      delete input.dataset.dropdownSelecting;
     }
   });
 }
@@ -556,8 +564,14 @@ function renderMoveDropdown(input, dropdown, memberIndex, slot) {
       <strong>${escapeHtml(move.name)}</strong>
       <span>${move.type} / ${capitalize(move.category)} / ${move.power ?? "-"} BP / ${move.accuracy ?? "-"}% acc / Priority ${move.priority}</span>
     `;
-    option.addEventListener("mousedown", (event) => event.preventDefault());
-    option.addEventListener("click", () => selectMoveForSlot(memberIndex, slot, move.id));
+    option.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      input.dataset.dropdownSelecting = "true";
+    });
+    option.addEventListener("click", () => {
+      selectMoveForSlot(memberIndex, slot, move.id);
+      delete input.dataset.dropdownSelecting;
+    });
     dropdown.append(option);
   }
 }
@@ -698,54 +712,50 @@ function renderCatchCalculator() {
     repeatBoost: state.catchSettings.repeatBoost,
   };
   const balls = [
-    ["poke", "Poke Ball"],
-    ["great", "Great Ball"],
-    ["ultra", "Ultra Ball"],
     ["quick", "Quick Ball"],
-    ["timer", "Timer Ball"],
-    ["dusk", "Dusk Ball"],
-    ["net", "Net Ball"],
+    ["ultra", "Ultra Ball"],
+    ["great", "Great Ball"],
+    ["poke", "Poke Ball"],
     ["nest", "Nest Ball"],
+    ["dusk", "Dusk Ball"],
+    ["timer", "Timer Ball"],
+    ["net", "Net Ball"],
     ["dive", "Dive Ball"],
     ["repeat", "Repeat Ball"],
-    ["premier", "Premier Ball"],
-    ["luxury", "Luxury Ball"],
     ["heal", "Heal Ball"],
+    ["luxury", "Luxury Ball"],
+    ["premier", "Premier Ball"],
   ];
-  const hpRows = [100, 75, 50, 25, 10, 1];
-  const rows = hpRows.map((hpPercent) => {
-    const results = balls.map(([id, name]) => {
-      const bonus = ballModifier(id, { ...context, hpPercent });
-      const result = catchChanceGen5({
-        captureRate,
-        hpPercent,
-        ballBonus: bonus,
-        statusBonus: state.catchSettings.statusBonus,
-      });
-      return { id, name, bonus, ...result };
-    }).sort((a, b) => b.chance - a.chance);
-    return { hpPercent, results: results.slice(0, 5) };
+  const hpPercent = Number(state.catchSettings.hpPercent) || 25;
+  const results = balls.map(([id, name]) => {
+    const bonus = ballModifier(id, { ...context, hpPercent });
+    const result = catchChanceGen5({
+      captureRate,
+      hpPercent,
+      ballBonus: bonus,
+      statusBonus: state.catchSettings.statusBonus,
+    });
+    return { id, name, bonus, ...result };
   });
 
   els.catchResults.innerHTML = `
     <div class="catch-summary">
       <span>Base catch rate: <strong>${captureRate}</strong></span>
       <span>Level: <strong>${level}</strong></span>
+      <span>HP: <strong>${hpPercent}%</strong></span>
     </div>
     <div class="catch-table">
-      ${rows.map((row) => `
-        <div class="catch-row">
-          <strong>${row.hpPercent}% HP</strong>
-          <div class="catch-ball-list">
-            ${row.results.map((result) => `
-              <span class="catch-ball">
-                <b>${escapeHtml(result.name)}</b>
-                <small>${formatPercent(result.chance)}${result.bonus !== 1 ? ` / ${formatMultiplier(result.bonus)}` : ""}</small>
-              </span>
-            `).join("")}
-          </div>
+      <div class="catch-row single-catch-row">
+        <strong>Best balls</strong>
+        <div class="catch-ball-list">
+          ${results.map((result) => `
+            <span class="catch-ball">
+              <b>${escapeHtml(result.name)}</b>
+              <small>${formatPercent(result.chance)}${result.bonus !== 1 ? ` / ${formatMultiplier(result.bonus)}` : ""}</small>
+            </span>
+          `).join("")}
         </div>
-      `).join("")}
+      </div>
     </div>
   `;
 }
