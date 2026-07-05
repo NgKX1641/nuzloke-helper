@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pokemon Black Nuzlocke Battle Helper</title>
+    <link rel="stylesheet" href="./src/styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <h1>Pokemon Black Nuzlocke Battle Helper</h1>
+        <p>Gen 5 type matchups, team risk checks, and quick attack recommendations.</p>
+        <p id="app-status" class="app-status">Loading local data. Open this through http://localhost:5177, not by double-clicking index.html.</p>
+      </div>
+      <div class="header-actions">
+        <label class="theme-switch">
+          <input id="setting-dark-mode" type="checkbox">
+          <span class="switch-track" aria-hidden="true"></span>
+          <span>Dark mode</span>
+        </label>
+        <button id="reset-data" class="ghost-button" type="button">Reset saved data</button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="panel settings-panel" aria-labelledby="settings-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="settings-title">Settings</h2>
+            <p id="randomized-type-note">Manual type overrides are available for randomized runs.</p>
+          </div>
+        </div>
+        <div class="settings-grid">
+          <label>
+            Game
+            <select id="setting-game">
+              <option>Pokemon Black</option>
+              <option>Pokemon White</option>
+            </select>
+          </label>
+          <label>
+            Generation
+            <input value="Gen 5" disabled>
+          </label>
+          <label>
+            Fairy type
+            <input value="Disabled" disabled>
+          </label>
+          <label class="toggle-row">
+            <input id="setting-types-randomized" type="checkbox">
+            Types randomized
+          </label>
+          <label class="toggle-row">
+            <input id="setting-moves-randomized" type="checkbox">
+            Moves randomized
+          </label>
+          <label class="toggle-row">
+            <input id="setting-abilities-randomized" type="checkbox">
+            Abilities randomized
+          </label>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="team-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="team-title">My Team</h2>
+            <p><span id="team-count">0</span>/6 Pokemon saved locally.</p>
+          </div>
+          <button id="add-team-member" type="button" disabled>Add Pokemon</button>
+        </div>
+        <div id="team-list" class="team-list"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="opponent-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="opponent-title">Opponent</h2>
+            <p>Search by name, then override types if your randomizer changed them.</p>
+          </div>
+        </div>
+        <div class="opponent-grid">
+          <label>
+            Pokemon
+            <input id="opponent-name" list="pokemon-options" placeholder="e.g. Pikachu">
+          </label>
+          <label class="type-override">
+            Type 1
+            <select id="opponent-type1"></select>
+          </label>
+          <label class="type-override">
+            Type 2
+            <select id="opponent-type2"></select>
+          </label>
+        </div>
+        <div class="caveat-panel">
+          <div class="subheading">
+            <strong>Quick caveats</strong>
+            <span>Use these when you know the opponent has a relevant ability or item.</span>
+          </div>
+          <div id="caveat-toggles" class="caveat-grid"></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="moves-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="moves-title">Recommended Move Types</h2>
+            <p>Attacking types grouped by effectiveness against the opponent.</p>
+          </div>
+        </div>
+        <div id="move-type-results" class="badge-grid"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="recommendations-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="recommendations-title">Team Safety / Recommendations</h2>
+            <p>Checks your STAB pressure and damage taken from opponent STAB.</p>
+          </div>
+        </div>
+        <div class="active-pokemon-panel">
+          <label>
+            Active Pokemon
+            <select id="active-member"></select>
+          </label>
+          <div id="active-move-panel" class="active-move-panel"></div>
+        </div>
+        <div id="team-recommendations" class="recommendation-list"></div>
+      </section>
+
+      <section class="panel warnings-panel" aria-labelledby="warnings-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="warnings-title">Warnings</h2>
+            <p>Fast danger notes for Nuzlocke decisions.</p>
+          </div>
+        </div>
+        <ul id="warnings-list" class="warnings-list"></ul>
+      </section>
+    </main>
+
+    <datalist id="pokemon-options"></datalist>
+    <template id="team-card-template">
+      <article class="team-card">
+        <details class="team-details" open>
+          <summary class="team-card-header">
+            <span class="team-summary-main">
+              <strong class="team-card-title">Pokemon</strong>
+              <span class="team-card-meta"></span>
+            </span>
+            <button class="remove-button" type="button" aria-label="Remove Pokemon">Remove</button>
+          </summary>
+          <div class="team-card-body">
+            <div class="team-card-grid">
+              <label>
+                Pokemon
+                <input class="team-name" list="pokemon-options" placeholder="e.g. Pikachu">
+              </label>
+              <label>
+                Nickname
+                <input class="team-nickname" placeholder="optional">
+              </label>
+              <label>
+                Level
+                <input class="team-level" type="number" min="1" max="100" value="5">
+              </label>
+              <label class="type-override">
+                Type 1
+                <select class="team-type1"></select>
+              </label>
+              <label class="type-override">
+                Type 2
+                <select class="team-type2"></select>
+              </label>
+              <label class="notes-field">
+                Notes
+                <textarea class="team-notes" rows="1" placeholder="optional"></textarea>
+              </label>
+            </div>
+            <div class="move-editor">
+              <div class="subheading">
+                <strong>Current moves</strong>
+                <span>Zero to four confirmed moves.</span>
+              </div>
+              <div class="move-slots"></div>
+            </div>
+            <div class="suggestions">
+              <div class="subheading">
+                <strong>Suggested learnable moves</strong>
+                <span>Shortcuts only. Nothing is added unless you choose it.</span>
+              </div>
+              <div class="suggestion-content"></div>
+            </div>
+          </div>
+        </details>
+      </article>
+    </template>
+    <dialog id="replace-move-dialog" class="replace-dialog">
+      <form method="dialog">
+        <h2 id="replace-dialog-title">Replace move</h2>
+        <p id="replace-dialog-copy"></p>
+        <div id="replace-dialog-options" class="replace-options"></div>
+        <div class="dialog-actions">
+          <button value="cancel" class="ghost-button" type="submit">Cancel</button>
+        </div>
+      </form>
+    </dialog>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
