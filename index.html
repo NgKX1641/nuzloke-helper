@@ -19,17 +19,102 @@
           <span class="switch-track" aria-hidden="true"></span>
           <span>Dark mode</span>
         </label>
-        <button id="reset-data" class="ghost-button" type="button">Reset saved data</button>
+        <button id="open-settings" class="ghost-button" type="button">Settings</button>
       </div>
     </header>
 
     <main class="app-shell">
-      <section class="panel settings-panel" aria-labelledby="settings-title">
+      <section class="panel team-panel" aria-labelledby="team-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="team-title">My Team</h2>
+            <p><span id="team-count">0</span>/6 Pokemon saved locally.</p>
+          </div>
+          <button id="add-team-member" type="button" disabled>Add Pokemon</button>
+        </div>
+        <div id="team-list" class="team-list"></div>
+      </section>
+
+      <div class="battle-column">
+        <section class="panel opponent-panel" aria-labelledby="opponent-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="opponent-title">Opponent</h2>
+              <p>Search by name, then override types if your randomizer changed them.</p>
+            </div>
+          </div>
+          <div class="opponent-grid">
+            <label>
+              Pokemon
+              <input id="opponent-name" list="pokemon-options" placeholder="e.g. Pikachu">
+            </label>
+            <label class="type-override">
+              Type 1
+              <select id="opponent-type1"></select>
+            </label>
+            <label class="type-override">
+              Type 2
+              <select id="opponent-type2"></select>
+            </label>
+          </div>
+          <div class="caveat-panel">
+            <div class="subheading">
+              <strong>Quick caveats</strong>
+              <span>Use these when you know the opponent has a relevant ability or item.</span>
+            </div>
+            <div id="caveat-toggles" class="caveat-grid"></div>
+          </div>
+        </section>
+
+        <div class="battle-bottom">
+          <section class="panel" aria-labelledby="moves-title">
+            <div class="section-heading">
+              <div>
+                <h2 id="moves-title">Recommended Move Types</h2>
+                <p>Attacking types grouped by effectiveness against the opponent.</p>
+              </div>
+            </div>
+            <div id="move-type-results" class="badge-grid"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="recommendations-title">
+            <div class="section-heading">
+              <div>
+                <h2 id="recommendations-title">Team Safety / Recommendations</h2>
+                <p>Checks your STAB pressure and damage taken from opponent STAB.</p>
+              </div>
+            </div>
+            <div class="active-pokemon-panel">
+              <label>
+                Active Pokemon
+                <select id="active-member"></select>
+              </label>
+              <div id="active-move-panel" class="active-move-panel"></div>
+            </div>
+            <div id="team-recommendations" class="recommendation-list"></div>
+          </section>
+
+          <section class="panel warnings-panel" aria-labelledby="warnings-title">
+            <div class="section-heading">
+              <div>
+                <h2 id="warnings-title">Warnings</h2>
+                <p>Fast danger notes for Nuzlocke decisions.</p>
+              </div>
+            </div>
+            <ul id="warnings-list" class="warnings-list"></ul>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <dialog id="settings-dialog" class="settings-dialog">
+      <form method="dialog">
         <div class="section-heading">
           <div>
             <h2 id="settings-title">Settings</h2>
             <p id="randomized-type-note">Manual type overrides are available for randomized runs.</p>
           </div>
+          <button class="ghost-button" value="close" type="submit">Close</button>
         </div>
         <div class="settings-grid">
           <label>
@@ -60,86 +145,8 @@
             Abilities randomized
           </label>
         </div>
-      </section>
-
-      <section class="panel" aria-labelledby="team-title">
-        <div class="section-heading">
-          <div>
-            <h2 id="team-title">My Team</h2>
-            <p><span id="team-count">0</span>/6 Pokemon saved locally.</p>
-          </div>
-          <button id="add-team-member" type="button" disabled>Add Pokemon</button>
-        </div>
-        <div id="team-list" class="team-list"></div>
-      </section>
-
-      <section class="panel" aria-labelledby="opponent-title">
-        <div class="section-heading">
-          <div>
-            <h2 id="opponent-title">Opponent</h2>
-            <p>Search by name, then override types if your randomizer changed them.</p>
-          </div>
-        </div>
-        <div class="opponent-grid">
-          <label>
-            Pokemon
-            <input id="opponent-name" list="pokemon-options" placeholder="e.g. Pikachu">
-          </label>
-          <label class="type-override">
-            Type 1
-            <select id="opponent-type1"></select>
-          </label>
-          <label class="type-override">
-            Type 2
-            <select id="opponent-type2"></select>
-          </label>
-        </div>
-        <div class="caveat-panel">
-          <div class="subheading">
-            <strong>Quick caveats</strong>
-            <span>Use these when you know the opponent has a relevant ability or item.</span>
-          </div>
-          <div id="caveat-toggles" class="caveat-grid"></div>
-        </div>
-      </section>
-
-      <section class="panel" aria-labelledby="moves-title">
-        <div class="section-heading">
-          <div>
-            <h2 id="moves-title">Recommended Move Types</h2>
-            <p>Attacking types grouped by effectiveness against the opponent.</p>
-          </div>
-        </div>
-        <div id="move-type-results" class="badge-grid"></div>
-      </section>
-
-      <section class="panel" aria-labelledby="recommendations-title">
-        <div class="section-heading">
-          <div>
-            <h2 id="recommendations-title">Team Safety / Recommendations</h2>
-            <p>Checks your STAB pressure and damage taken from opponent STAB.</p>
-          </div>
-        </div>
-        <div class="active-pokemon-panel">
-          <label>
-            Active Pokemon
-            <select id="active-member"></select>
-          </label>
-          <div id="active-move-panel" class="active-move-panel"></div>
-        </div>
-        <div id="team-recommendations" class="recommendation-list"></div>
-      </section>
-
-      <section class="panel warnings-panel" aria-labelledby="warnings-title">
-        <div class="section-heading">
-          <div>
-            <h2 id="warnings-title">Warnings</h2>
-            <p>Fast danger notes for Nuzlocke decisions.</p>
-          </div>
-        </div>
-        <ul id="warnings-list" class="warnings-list"></ul>
-      </section>
-    </main>
+      </form>
+    </dialog>
 
     <datalist id="pokemon-options"></datalist>
     <template id="team-card-template">

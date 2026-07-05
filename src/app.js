@@ -32,7 +32,7 @@ const state = {
     typesRandomized: false,
     movesRandomized: false,
     abilitiesRandomized: false,
-    darkMode: false,
+    darkMode: true,
   },
 };
 
@@ -69,7 +69,8 @@ function cacheEls() {
     teamList: document.querySelector("#team-list"),
     teamCount: document.querySelector("#team-count"),
     addTeamMember: document.querySelector("#add-team-member"),
-    resetData: document.querySelector("#reset-data"),
+    openSettings: document.querySelector("#open-settings"),
+    settingsDialog: document.querySelector("#settings-dialog"),
     pokemonOptions: document.querySelector("#pokemon-options"),
     opponentName: document.querySelector("#opponent-name"),
     opponentType1: document.querySelector("#opponent-type1"),
@@ -154,25 +155,12 @@ function setupAutocomplete() {
 function bindEvents() {
   selectTextOnFocus(els.opponentName);
   bindRankedLookup(els.opponentName, els.pokemonOptions, pokemon, (entry) => entry.name);
+  els.openSettings.addEventListener("click", () => {
+    els.settingsDialog.showModal();
+  });
   els.addTeamMember.addEventListener("click", () => {
     if (state.team.length >= 6) return;
     state.team.push(normalizeMember({ id: crypto.randomUUID(), level: 5, types: ["Normal"], moves: [] }));
-    saveState();
-    render();
-  });
-  els.resetData.addEventListener("click", () => {
-    if (!confirm("Clear saved team, moves, opponent, and settings?")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    state.team = [];
-    state.opponent = { pokemonName: "", types: [] };
-    state.activeMemberId = "";
-    state.settings = {
-      game: "Pokemon Black",
-      typesRandomized: false,
-      movesRandomized: false,
-      abilitiesRandomized: false,
-      darkMode: false,
-    };
     saveState();
     render();
   });
@@ -235,7 +223,9 @@ function renderSettings() {
   els.settingDarkMode.checked = state.settings.darkMode;
   document.body.classList.toggle("types-randomized", state.settings.typesRandomized);
   document.body.classList.toggle("dark-mode", state.settings.darkMode);
+  document.body.classList.toggle("light-mode", !state.settings.darkMode);
   document.documentElement.classList.toggle("dark-mode", state.settings.darkMode);
+  document.documentElement.classList.toggle("light-mode", !state.settings.darkMode);
   els.randomizedTypeNote.textContent = state.settings.typesRandomized
     ? "Types randomized is on. Type override fields are highlighted."
     : "Manual type overrides are available for randomized runs.";
