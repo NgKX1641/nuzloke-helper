@@ -64,6 +64,43 @@
         </section>
 
         <div class="battle-bottom">
+          <section class="panel" aria-labelledby="moves-title">
+            <div class="section-heading">
+              <div>
+                <h2 id="moves-title">Recommended Move Types</h2>
+                <p>Attacking types grouped by effectiveness against the opponent.</p>
+              </div>
+            </div>
+            <div id="move-type-results" class="badge-grid"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="recommendations-title">
+            <div class="section-heading">
+              <div>
+                <h2 id="recommendations-title">Team Safety / Recommendations</h2>
+                <p>Checks your STAB pressure and damage taken from opponent STAB.</p>
+              </div>
+            </div>
+            <div class="active-pokemon-panel">
+              <label>
+                Active Pokemon
+                <select id="active-member"></select>
+              </label>
+              <div id="active-move-panel" class="active-move-panel"></div>
+            </div>
+            <div id="team-recommendations" class="recommendation-list"></div>
+          </section>
+
+          <section class="panel warnings-panel" aria-labelledby="warnings-title">
+            <div class="section-heading">
+              <div>
+                <h2 id="warnings-title">Warnings</h2>
+                <p>Fast danger notes for Nuzlocke decisions.</p>
+              </div>
+            </div>
+            <ul id="warnings-list" class="warnings-list"></ul>
+          </section>
+
           <section class="panel" aria-labelledby="catch-title">
             <div class="section-heading">
               <div>
@@ -109,43 +146,6 @@
               </label>
             </div>
             <div id="catch-results" class="catch-results"></div>
-          </section>
-
-          <section class="panel" aria-labelledby="moves-title">
-            <div class="section-heading">
-              <div>
-                <h2 id="moves-title">Recommended Move Types</h2>
-                <p>Attacking types grouped by effectiveness against the opponent.</p>
-              </div>
-            </div>
-            <div id="move-type-results" class="badge-grid"></div>
-          </section>
-
-          <section class="panel" aria-labelledby="recommendations-title">
-            <div class="section-heading">
-              <div>
-                <h2 id="recommendations-title">Team Safety / Recommendations</h2>
-                <p>Checks your STAB pressure and damage taken from opponent STAB.</p>
-              </div>
-            </div>
-            <div class="active-pokemon-panel">
-              <label>
-                Active Pokemon
-                <select id="active-member"></select>
-              </label>
-              <div id="active-move-panel" class="active-move-panel"></div>
-            </div>
-            <div id="team-recommendations" class="recommendation-list"></div>
-          </section>
-
-          <section class="panel warnings-panel" aria-labelledby="warnings-title">
-            <div class="section-heading">
-              <div>
-                <h2 id="warnings-title">Warnings</h2>
-                <p>Fast danger notes for Nuzlocke decisions.</p>
-              </div>
-            </div>
-            <ul id="warnings-list" class="warnings-list"></ul>
           </section>
         </div>
       </div>

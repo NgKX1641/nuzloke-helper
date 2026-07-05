@@ -774,7 +774,6 @@ function renderActiveMovePanel() {
         <strong>${escapeHtml(member.nickname || member.pokemonName || "Pokemon")}</strong>
         <p class="muted">No damaging current moves selected.</p>
       </div>
-      ${ranked.status.length ? moveRankingHtml(ranked) : ""}
     `;
     return;
   }
@@ -786,7 +785,7 @@ function renderActiveMovePanel() {
       <span>${effectivenessLabel(best.typeEffectiveness)}${best.stab ? " / STAB" : ""}${best.move.priority > 0 ? " / priority" : ""}</span>
       <span>Score: ${best.score.toFixed(1)}</span>
     </div>
-    ${moveRankingHtml(ranked)}
+    ${ranked.status.length ? moveStatusHtml(ranked) : ""}
   `;
 }
 
@@ -827,7 +826,6 @@ function renderTeamRecommendations() {
 
   for (const member of state.team) {
     const risk = teamRisk(member, state.opponent, typeChart);
-    const ranked = rankSelectedMoves(member, state.opponent, typeChart);
     const card = document.createElement("article");
     card.className = "recommendation-card";
     card.innerHTML = `
@@ -838,25 +836,13 @@ function renderTeamRecommendations() {
         </div>
         <span class="status-pill ${riskClass(risk.label)}">${risk.label}</span>
       </div>
-      <p>${stabSummary(risk.memberStab)} Takes ${incomingSummary(risk.incoming)} from opponent STAB.</p>
-      ${moveRankingHtml(ranked)}
+      <p class="compact-summary">${stabSummary(risk.memberStab)} <span>Takes ${incomingSummary(risk.incoming)} from opponent STAB.</span></p>
     `;
     els.teamRecommendations.append(card);
   }
 }
 
-function moveRankingHtml(ranked) {
-  if (!ranked.damaging.length && !ranked.status.length) {
-    return '<p class="muted">No current moves selected. Add moves in My Team to rank actual options.</p>';
-  }
-  const damaging = ranked.damaging.map((result, index) => `
-    <li>
-      <strong>${index + 1}. ${escapeHtml(result.move.name)}</strong>
-      <span>${result.move.type} / ${capitalize(result.move.category)} / ${result.move.power ?? "-"} BP / ${result.move.accuracy ?? "-"}% acc</span>
-      <span>${effectivenessLabel(result.typeEffectiveness)}${result.stab ? " / STAB" : ""}${result.move.priority > 0 ? " / priority" : ""}</span>
-      <span>${result.typeEffectiveness === 0 ? "Immune. " : ""}Score: ${result.score.toFixed(1)}</span>
-    </li>
-  `).join("");
+function moveStatusHtml(ranked) {
   const status = ranked.status.map((result) => `
     <li>
       <strong>${escapeHtml(result.move.name)}</strong>
@@ -865,8 +851,6 @@ function moveRankingHtml(ranked) {
   `).join("");
   return `
     <div class="move-ranking">
-      <h3>Recommended current moves</h3>
-      <ol>${damaging || "<li>No damaging moves selected.</li>"}</ol>
       ${status ? `<h3>Status / Utility moves</h3><ul>${status}</ul>` : ""}
     </div>
   `;
@@ -901,8 +885,27 @@ function renderWarnings() {
     warnings.push(...validation.warnings.map((warning) => `${name}: ${warning}`));
   }
   els.warningsList.innerHTML = warnings.length
-    ? warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")
+    ? warnings.map((warning) => `<li>${renderWarningHtml(warning)}</li>`).join("")
     : "<li>No major type warnings.</li>";
+}
+
+function renderWarningHtml(warning) {
+  const types = [...typeChart.types].sort((a, b) => b.length - a.length);
+  const regex = new RegExp(`\\b(${types.map(escapeRegex).join("|")})\\b`, "g");
+  let output = "";
+  let lastIndex = 0;
+  for (const match of warning.matchAll(regex)) {
+    output += escapeHtml(warning.slice(lastIndex, match.index));
+    const type = match[1];
+    output += `<span class="type-badge type-${normalizeId(type)}">${escapeHtml(type)}</span>`;
+    lastIndex = match.index + type.length;
+  }
+  output += escapeHtml(warning.slice(lastIndex));
+  return output;
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function typeBadges(types) {
