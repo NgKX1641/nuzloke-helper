@@ -1,5 +1,7 @@
 import {
   addOrReplaceMove,
+  ballModifier,
+  catchChanceGen5,
   effectiveness,
   effectivenessLabel,
   getMoveSuggestions,
@@ -17,9 +19,16 @@ const EMPTY_TYPE = "";
 
 const state = {
   team: [],
-  opponent: { pokemonName: "", types: [] },
+  opponent: { pokemonName: "", types: [], level: 5 },
   activeMemberId: "",
   collapsedTeamCards: {},
+  catchSettings: {
+    statusBonus: 1,
+    turn: 1,
+    duskBoost: false,
+    diveBoost: false,
+    repeatBoost: false,
+  },
   settings: {
     game: "Pokemon Black",
     typesRandomized: false,
@@ -33,28 +42,33 @@ let pokemon = [];
 let typeChart = null;
 let moves = [];
 let learnsets = [];
+let captureRates = [];
 let pokemonByName = new Map();
 let pokemonByDex = new Map();
 let moveByName = new Map();
 let moveMap = new Map();
+let captureRateByPokemonId = new Map();
 
 const els = {};
 
 async function loadData() {
-  const [pokemonData, chartData, movesData, learnsetData] = await Promise.all([
+  const [pokemonData, chartData, movesData, learnsetData, captureRateData] = await Promise.all([
     fetch("./src/data/pokemon.gen5.json").then((response) => response.json()),
     fetch("./src/data/typeChart.gen5.json").then((response) => response.json()),
     fetch("./src/data/moves.gen5.json").then((response) => response.json()),
     fetch("./src/data/learnsets.black-white.json").then((response) => response.json()),
+    fetch("./src/data/captureRates.gen5.json").then((response) => response.json()),
   ]);
   pokemon = pokemonData;
   typeChart = chartData;
   moves = movesData;
   learnsets = learnsetData;
+  captureRates = captureRateData;
   pokemonByName = new Map(pokemon.map((entry) => [normalizeId(entry.name), entry]));
   pokemonByDex = new Map(pokemon.map((entry) => [entry.dex, entry]));
   moveByName = new Map(moves.map((move) => [normalizeId(move.name), move]));
   moveMap = new Map(moves.map((move) => [move.id, move]));
+  captureRateByPokemonId = new Map(captureRates.map((entry) => [entry.pokemonId, entry.captureRate]));
 }
 
 function cacheEls() {
@@ -68,6 +82,13 @@ function cacheEls() {
     opponentName: document.querySelector("#opponent-name"),
     opponentType1: document.querySelector("#opponent-type1"),
     opponentType2: document.querySelector("#opponent-type2"),
+    opponentLevel: document.querySelector("#opponent-level"),
+    catchStatus: document.querySelector("#catch-status"),
+    catchTurn: document.querySelector("#catch-turn"),
+    catchDusk: document.querySelector("#catch-dusk"),
+    catchDive: document.querySelector("#catch-dive"),
+    catchRepeat: document.querySelector("#catch-repeat"),
+    catchResults: document.querySelector("#catch-results"),
     moveTypeResults: document.querySelector("#move-type-results"),
     teamRecommendations: document.querySelector("#team-recommendations"),
     warningsList: document.querySelector("#warnings-list"),
@@ -97,6 +118,7 @@ function loadState() {
     state.opponent = saved.opponent || state.opponent;
     state.activeMemberId = saved.activeMemberId || "";
     state.collapsedTeamCards = saved.collapsedTeamCards || {};
+    state.catchSettings = { ...state.catchSettings, ...(saved.catchSettings || {}) };
     state.team = (saved.team || []).map(normalizeMember).slice(0, 6);
   } catch {
     localStorage.removeItem(STORAGE_KEY);
@@ -164,6 +186,7 @@ function bindEvents() {
       state.opponent.pokemonId = entry.dex;
       state.opponent.pokemonName = entry.name;
       state.opponent.types = [entry.type1, entry.type2].filter(Boolean);
+      state.opponent.captureRate = captureRateByPokemonId.get(entry.dex) ?? null;
     }
     saveState();
     render();
@@ -178,6 +201,18 @@ function bindEvents() {
     saveState();
     renderResults();
   });
+  els.opponentLevel.addEventListener("change", () => {
+    state.opponent.level = Math.max(1, Math.min(100, Number(els.opponentLevel.value) || 1));
+    els.opponentLevel.value = state.opponent.level;
+    saveState();
+    renderResults();
+  });
+  for (const element of [els.catchStatus, els.catchTurn, els.catchDusk, els.catchDive, els.catchRepeat]) {
+    element.addEventListener("change", () => {
+      saveCatchSettings();
+      renderCatchCalculator();
+    });
+  }
   els.activeMember.addEventListener("change", () => {
     state.activeMemberId = els.activeMember.value;
     saveState();
@@ -229,6 +264,31 @@ function renderOpponent() {
   optionList(els.opponentType2, true);
   els.opponentType1.value = state.opponent.types?.[0] || "Normal";
   els.opponentType2.value = state.opponent.types?.[1] || "";
+  els.opponentLevel.value = state.opponent.level || 5;
+  if (state.opponent.pokemonId && state.opponent.captureRate == null) {
+    state.opponent.captureRate = captureRateByPokemonId.get(state.opponent.pokemonId) ?? null;
+  }
+  renderCatchSettings();
+}
+
+function renderCatchSettings() {
+  els.catchStatus.value = String(state.catchSettings.statusBonus ?? 1);
+  els.catchTurn.value = state.catchSettings.turn ?? 1;
+  els.catchDusk.checked = Boolean(state.catchSettings.duskBoost);
+  els.catchDive.checked = Boolean(state.catchSettings.diveBoost);
+  els.catchRepeat.checked = Boolean(state.catchSettings.repeatBoost);
+}
+
+function saveCatchSettings() {
+  state.catchSettings = {
+    statusBonus: Number(els.catchStatus.value) || 1,
+    turn: Math.max(1, Math.min(99, Number(els.catchTurn.value) || 1)),
+    duskBoost: els.catchDusk.checked,
+    diveBoost: els.catchDive.checked,
+    repeatBoost: els.catchRepeat.checked,
+  };
+  els.catchTurn.value = state.catchSettings.turn;
+  saveState();
 }
 
 function renderTeam() {
@@ -589,11 +649,13 @@ function renderResults() {
   if (!opponentTypes.length) {
     els.moveTypeResults.innerHTML = '<p class="empty-state">Select an opponent first.</p>';
     els.activeMovePanel.innerHTML = '<p class="empty-state">Select an opponent to rank the active Pokemon moves.</p>';
+    els.catchResults.innerHTML = '<p class="empty-state">Select an opponent to calculate catch odds.</p>';
     els.teamRecommendations.innerHTML = '<p class="empty-state">Team recommendations will appear here.</p>';
     els.warningsList.innerHTML = '<li>Select an opponent to see danger warnings.</li>';
     return;
   }
 
+  renderCatchCalculator();
   renderTypeResults();
   renderActiveMovePanel();
   renderTeamRecommendations();
@@ -618,6 +680,74 @@ function renderActiveMemberControls() {
     els.activeMember.append(option);
   }
   els.activeMember.value = state.activeMemberId || state.team[0].id;
+}
+
+function renderCatchCalculator() {
+  const captureRate = state.opponent.captureRate ?? captureRateByPokemonId.get(state.opponent.pokemonId);
+  if (!captureRate) {
+    els.catchResults.innerHTML = '<p class="empty-state">No capture-rate data for this opponent.</p>';
+    return;
+  }
+  const level = Math.max(1, Math.min(100, Number(state.opponent.level) || 5));
+  const context = {
+    level,
+    turn: state.catchSettings.turn,
+    types: state.opponent.types || [],
+    duskBoost: state.catchSettings.duskBoost,
+    diveBoost: state.catchSettings.diveBoost,
+    repeatBoost: state.catchSettings.repeatBoost,
+  };
+  const balls = [
+    ["poke", "Poke Ball"],
+    ["great", "Great Ball"],
+    ["ultra", "Ultra Ball"],
+    ["quick", "Quick Ball"],
+    ["timer", "Timer Ball"],
+    ["dusk", "Dusk Ball"],
+    ["net", "Net Ball"],
+    ["nest", "Nest Ball"],
+    ["dive", "Dive Ball"],
+    ["repeat", "Repeat Ball"],
+    ["premier", "Premier Ball"],
+    ["luxury", "Luxury Ball"],
+    ["heal", "Heal Ball"],
+  ];
+  const hpRows = [100, 75, 50, 25, 10, 1];
+  const rows = hpRows.map((hpPercent) => {
+    const results = balls.map(([id, name]) => {
+      const bonus = ballModifier(id, { ...context, hpPercent });
+      const result = catchChanceGen5({
+        captureRate,
+        hpPercent,
+        ballBonus: bonus,
+        statusBonus: state.catchSettings.statusBonus,
+      });
+      return { id, name, bonus, ...result };
+    }).sort((a, b) => b.chance - a.chance);
+    return { hpPercent, results: results.slice(0, 5) };
+  });
+
+  els.catchResults.innerHTML = `
+    <div class="catch-summary">
+      <span>Base catch rate: <strong>${captureRate}</strong></span>
+      <span>Level: <strong>${level}</strong></span>
+    </div>
+    <div class="catch-table">
+      ${rows.map((row) => `
+        <div class="catch-row">
+          <strong>${row.hpPercent}% HP</strong>
+          <div class="catch-ball-list">
+            ${row.results.map((result) => `
+              <span class="catch-ball">
+                <b>${escapeHtml(result.name)}</b>
+                <small>${formatPercent(result.chance)}${result.bonus !== 1 ? ` / ${formatMultiplier(result.bonus)}` : ""}</small>
+              </span>
+            `).join("")}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 function renderActiveMovePanel() {
@@ -802,6 +932,14 @@ function riskClass(label) {
 
 function capitalize(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatPercent(value) {
+  return `${(value * 100).toFixed(value >= 0.1 ? 1 : 2)}%`;
+}
+
+function formatMultiplier(value) {
+  return `${Number(value).toFixed(value % 1 === 0 ? 0 : 1)}x`;
 }
 
 function escapeHtml(value) {

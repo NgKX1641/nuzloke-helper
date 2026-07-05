@@ -204,3 +204,46 @@ export function teamRisk(member, opponent, typeChart) {
 
   return { label, memberStab, incoming, bestStab, worstIncoming };
 }
+
+export function ballModifier(ballId, context = {}) {
+  const hpPercent = Number(context.hpPercent ?? 100);
+  const level = Number(context.level ?? 50);
+  const turn = Number(context.turn ?? 1);
+  switch (ballId) {
+    case "poke": return 1;
+    case "premier": return 1;
+    case "luxury": return 1;
+    case "heal": return 1;
+    case "great": return 1.5;
+    case "ultra": return 2;
+    case "net": return context.types?.some((type) => type === "Water" || type === "Bug") ? 3 : 1;
+    case "dive": return context.diveBoost ? 3.5 : 1;
+    case "dusk": return context.duskBoost ? 3.5 : 1;
+    case "quick": return turn <= 1 ? 4 : 1;
+    case "timer": return Math.min(4, 1 + Math.max(0, turn - 1) * 1229 / 4096);
+    case "repeat": return context.repeatBoost ? 3 : 1;
+    case "nest": return level <= 29 ? Math.max(1, (41 - level) / 10) : 1;
+    default: return 1;
+  }
+}
+
+export function catchChanceGen5({
+  captureRate,
+  hpPercent,
+  ballBonus = 1,
+  statusBonus = 1,
+  darkGrassModifier = 1,
+}) {
+  const maxHp = 100;
+  const currentHp = Math.max(1, Math.min(maxHp, Math.round(maxHp * Number(hpPercent) / 100)));
+  const modifiedRate = Math.floor(
+    (((3 * maxHp - 2 * currentHp) * Number(captureRate) * Number(ballBonus)) / (3 * maxHp)) *
+    Number(statusBonus) *
+    Number(darkGrassModifier)
+  );
+  const cappedRate = Math.max(1, Math.min(255, modifiedRate));
+  if (cappedRate >= 255) return { modifiedRate: cappedRate, chance: 1 };
+  const shakeProbability = 65536 / Math.pow(255 / cappedRate, 0.1875);
+  const chance = Math.pow(shakeProbability / 65536, 4);
+  return { modifiedRate: cappedRate, chance: Math.max(0, Math.min(1, chance)) };
+}

@@ -4,6 +4,8 @@ import path from "node:path";
 import test from "node:test";
 import {
   addOrReplaceMove,
+  ballModifier,
+  catchChanceGen5,
   effectivePower,
   effectiveness,
   getMoveSuggestions,
@@ -99,4 +101,15 @@ test("Status moves are excluded from damage ranking", () => {
 test("lookup ranking prefers prefix matches over contained substring matches", () => {
   const ranked = rankLookupItems([move("wingattack"), move("sandattack"), move("tackle")], "tac");
   assert.equal(ranked[0].id, "tackle");
+});
+
+test("Nest Ball is stronger at low target levels", () => {
+  assert.equal(ballModifier("nest", { level: 5 }), 3.6);
+  assert.equal(ballModifier("nest", { level: 30 }), 1);
+});
+
+test("catch chance improves as HP drops", () => {
+  const fullHp = catchChanceGen5({ captureRate: 45, hpPercent: 100, ballBonus: 1, statusBonus: 1 });
+  const lowHp = catchChanceGen5({ captureRate: 45, hpPercent: 1, ballBonus: 1, statusBonus: 1 });
+  assert.ok(lowHp.chance > fullHp.chance);
 });

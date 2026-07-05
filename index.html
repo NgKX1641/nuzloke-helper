@@ -56,10 +56,50 @@
               Type 2
               <select id="opponent-type2"></select>
             </label>
+            <label>
+              Level
+              <input id="opponent-level" type="number" min="1" max="100" value="5">
+            </label>
           </div>
         </section>
 
         <div class="battle-bottom">
+          <section class="panel" aria-labelledby="catch-title">
+            <div class="section-heading">
+              <div>
+                <h2 id="catch-title">Catch Rate Calculator</h2>
+                <p>Estimated Gen 5 catch chance by HP, status, and Poké Ball.</p>
+              </div>
+            </div>
+            <div class="catch-controls">
+              <label>
+                Status
+                <select id="catch-status">
+                  <option value="1">None</option>
+                  <option value="1.5">Paralyzed / Poisoned / Burned</option>
+                  <option value="2.5">Sleep / Frozen</option>
+                </select>
+              </label>
+              <label>
+                Battle turn
+                <input id="catch-turn" type="number" min="1" max="99" value="1">
+              </label>
+              <label class="toggle-row">
+                <input id="catch-dusk" type="checkbox">
+                Cave / night
+              </label>
+              <label class="toggle-row">
+                <input id="catch-dive" type="checkbox">
+                Surfing / fishing
+              </label>
+              <label class="toggle-row">
+                <input id="catch-repeat" type="checkbox">
+                Already caught
+              </label>
+            </div>
+            <div id="catch-results" class="catch-results"></div>
+          </section>
+
           <section class="panel" aria-labelledby="moves-title">
             <div class="section-heading">
               <div>

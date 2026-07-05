@@ -316,6 +316,7 @@ textarea {
 
 .settings-grid,
 .opponent-grid,
+.catch-controls,
 .team-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -347,6 +348,54 @@ textarea {
 .active-move-panel {
   display: grid;
   gap: 0.75rem;
+}
+
+.catch-results {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+}
+
+.catch-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: var(--muted);
+}
+
+.catch-table {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.catch-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.55rem;
+  background: var(--subtle-bg);
+}
+
+.catch-ball-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.45rem;
+}
+
+.catch-ball {
+  display: grid;
+  gap: 0.15rem;
+  border-radius: 6px;
+  background: var(--soft-bg);
+  padding: 0.45rem 0.55rem;
+}
+
+.catch-ball small {
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .best-move-card,
