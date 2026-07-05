@@ -1,7 +1,8 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const tmp = path.join(root, "tmp-data");
 const out = path.join(root, "src", "data");
 
@@ -110,11 +111,29 @@ function nullableNumber(value) {
   return Number(value);
 }
 
+function cleanText(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/\u00ad/g, "")
+    .trim();
+}
+
 function main() {
   const moveNames = new Map(
     readCsv("move_names.csv")
       .filter((row) => row.local_language_id === "9")
       .map((row) => [row.move_id, row.name])
+  );
+  const blackWhiteFlavor = new Map(
+    readCsv("move_flavor_text.csv")
+      .filter((row) => row.version_group_id === String(BLACK_WHITE_VERSION_GROUP))
+      .filter((row) => row.language_id === "9")
+      .map((row) => [row.move_id, cleanText(row.flavor_text)])
+  );
+  const effectProse = new Map(
+    readCsv("move_effect_prose.csv")
+      .filter((row) => row.local_language_id === "9")
+      .map((row) => [row.move_effect_id, cleanText(row.short_effect)])
   );
 
   const moves = readCsv("moves.csv")
@@ -129,6 +148,8 @@ function main() {
       power: nullableNumber(row.power),
       accuracy: nullableNumber(row.accuracy),
       priority: Number(row.priority || 0),
+      description: blackWhiteFlavor.get(row.id) || effectProse.get(row.effect_id) || "",
+      effect: effectProse.get(row.effect_id) || "",
     }))
     .filter((move) => move.category);
 

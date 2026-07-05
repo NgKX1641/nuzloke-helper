@@ -33,6 +33,20 @@
           <button id="add-team-member" type="button" disabled>Add Pokemon</button>
         </div>
         <div id="team-list" class="team-list"></div>
+
+        <section class="lookup-panel" aria-labelledby="levelup-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="levelup-title">Level-Up Moves</h2>
+              <p>Look up Black/White level-up moves for any Pokemon.</p>
+            </div>
+          </div>
+          <label class="levelup-search">
+            Pokemon
+            <input id="levelup-pokemon" list="pokemon-options" placeholder="e.g. Pikachu">
+          </label>
+          <div id="levelup-results" class="levelup-results"></div>
+        </section>
       </section>
 
       <div class="battle-column">
@@ -42,6 +56,7 @@
               <h2 id="opponent-title">Opponent</h2>
               <p>Search by name, then override types if your randomizer changed them.</p>
             </div>
+            <button id="clear-opponent" class="ghost-button" type="button">Clear</button>
           </div>
           <div class="opponent-grid">
             <label>
@@ -55,10 +70,6 @@
             <label class="type-override">
               Type 2
               <select id="opponent-type2"></select>
-            </label>
-            <label>
-              Level
-              <input id="opponent-level" type="number" min="1" max="100" value="5">
             </label>
           </div>
         </section>
@@ -105,10 +116,14 @@
             <div class="section-heading">
               <div>
                 <h2 id="catch-title">Catch Rate Calculator</h2>
-                <p>Estimated Gen 5 catch chance by HP, status, and Poké Ball.</p>
+                <p>Estimated Gen 5 catch chance by level, HP, status, and Poke Ball.</p>
               </div>
             </div>
             <div class="catch-controls">
+              <label>
+                Level
+                <input id="opponent-level" type="number" min="1" max="100" value="5">
+              </label>
               <label>
                 HP
                 <select id="catch-hp">
@@ -191,6 +206,8 @@
         </div>
       </form>
     </dialog>
+
+    <div id="move-tooltip" class="move-tooltip" role="tooltip" hidden></div>
 
     <datalist id="pokemon-options"></datalist>
     <template id="team-card-template">

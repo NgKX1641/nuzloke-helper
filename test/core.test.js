@@ -100,6 +100,11 @@ test("Status moves are excluded from damage ranking", () => {
   assert.deepEqual(ranked.status.map((entry) => entry.move.id), ["swordsdance"]);
 });
 
+test("fixed-damage moves include effect descriptions", () => {
+  assert.match(move("dragonrage").description, /40 HP damage/);
+  assert.match(move("dragonrage").effect, /40 points of damage/);
+});
+
 test("lookup ranking prefers prefix matches over contained substring matches", () => {
   const ranked = rankLookupItems([move("wingattack"), move("sandattack"), move("tackle")], "tac");
   assert.equal(ranked[0].id, "tackle");

@@ -448,6 +448,67 @@ textarea {
   margin-top: 1rem;
 }
 
+.lookup-panel {
+  border-top: 1px solid var(--line);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.levelup-search {
+  margin-top: 0.85rem;
+}
+
+.levelup-results {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+}
+
+.levelup-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  color: var(--muted);
+}
+
+.levelup-summary strong {
+  color: var(--text);
+}
+
+.levelup-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--subtle-bg);
+}
+
+.levelup-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.levelup-table th,
+.levelup-table td {
+  padding: 0.5rem 0.55rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.levelup-table th {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  background: var(--soft-bg);
+}
+
+.levelup-table tr:last-child td {
+  border-bottom: 0;
+}
+
 .team-card,
 .recommendation-card {
   border: 1px solid var(--line);
@@ -514,6 +575,27 @@ textarea {
 
 .move-count {
   color: var(--muted);
+}
+
+.move-with-tooltip {
+  cursor: help;
+  text-decoration: underline dotted currentColor;
+  text-underline-offset: 0.18rem;
+}
+
+.move-tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(22rem, calc(100vw - 2rem));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0.65rem 0.75rem;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+  font-size: 0.88rem;
+  line-height: 1.35;
+  pointer-events: none;
 }
 
 .team-card-body {

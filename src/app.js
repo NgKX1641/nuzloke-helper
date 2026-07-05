@@ -20,6 +20,7 @@ const EMPTY_TYPE = "";
 const state = {
   team: [],
   opponent: { pokemonName: "", types: [], level: 5 },
+  levelupLookup: { pokemonName: "" },
   activeMemberId: "",
   collapsedTeamCards: {},
   catchSettings: {
@@ -80,7 +81,10 @@ function cacheEls() {
     openSettings: document.querySelector("#open-settings"),
     settingsDialog: document.querySelector("#settings-dialog"),
     pokemonOptions: document.querySelector("#pokemon-options"),
+    levelupPokemon: document.querySelector("#levelup-pokemon"),
+    levelupResults: document.querySelector("#levelup-results"),
     opponentName: document.querySelector("#opponent-name"),
+    clearOpponent: document.querySelector("#clear-opponent"),
     opponentType1: document.querySelector("#opponent-type1"),
     opponentType2: document.querySelector("#opponent-type2"),
     opponentLevel: document.querySelector("#opponent-level"),
@@ -105,6 +109,7 @@ function cacheEls() {
     replaceDialogTitle: document.querySelector("#replace-dialog-title"),
     replaceDialogCopy: document.querySelector("#replace-dialog-copy"),
     replaceDialogOptions: document.querySelector("#replace-dialog-options"),
+    moveTooltip: document.querySelector("#move-tooltip"),
     randomizedTypeNote: document.querySelector("#randomized-type-note"),
     appStatus: document.querySelector("#app-status"),
     template: document.querySelector("#team-card-template"),
@@ -118,6 +123,7 @@ function loadState() {
     const saved = JSON.parse(raw);
     state.settings = { ...state.settings, ...(saved.settings || {}) };
     state.opponent = normalizeOpponent(saved.opponent || state.opponent);
+    state.levelupLookup = { ...state.levelupLookup, ...(saved.levelupLookup || {}) };
     state.activeMemberId = saved.activeMemberId || "";
     state.collapsedTeamCards = saved.collapsedTeamCards || {};
     state.catchSettings = { ...state.catchSettings, ...(saved.catchSettings || {}) };
@@ -140,7 +146,7 @@ function normalizeMember(member = {}) {
     nickname: member.nickname || "",
     level: Math.max(1, Math.min(100, Number(member.level) || 5)),
     types,
-    moves: (member.moves || []).filter((move) => moveMap.has(move.id)).slice(0, 4),
+    moves: (member.moves || []).filter((move) => moveMap.has(move.id)).map((move) => moveMap.get(move.id)).slice(0, 4),
     notes: member.notes || "",
   };
 }
@@ -187,10 +193,24 @@ function setupAutocomplete() {
 }
 
 function bindEvents() {
+  bindMoveTooltips();
   selectTextOnFocus(els.opponentName);
+  selectTextOnFocus(els.levelupPokemon);
   bindRankedLookup(els.opponentName, els.pokemonOptions, pokemon, (entry) => entry.name);
+  bindRankedLookup(els.levelupPokemon, els.pokemonOptions, pokemon, (entry) => entry.name);
+  els.levelupPokemon.addEventListener("change", () => {
+    const entry = pokemonByName.get(normalizeId(els.levelupPokemon.value));
+    state.levelupLookup.pokemonName = entry ? entry.name : els.levelupPokemon.value;
+    saveState();
+    renderLevelUpLookup();
+  });
   els.openSettings.addEventListener("click", () => {
     els.settingsDialog.showModal();
+  });
+  els.clearOpponent.addEventListener("click", () => {
+    state.opponent = { pokemonName: "", types: [], level: 5, pokemonId: null };
+    saveState();
+    render();
   });
   els.addTeamMember.addEventListener("click", () => {
     if (state.team.length >= 6) return;
@@ -257,6 +277,7 @@ function render() {
   renderSettings();
   renderOpponent();
   renderTeam();
+  renderLevelUpLookup();
   renderResults();
 }
 
@@ -334,6 +355,76 @@ function renderTeam() {
     fillTeamCard(card, member, index);
     els.teamList.append(card);
   });
+}
+
+function renderLevelUpLookup() {
+  const name = state.levelupLookup.pokemonName || "";
+  els.levelupPokemon.value = name;
+  if (!name.trim()) {
+    els.levelupResults.innerHTML = '<p class="empty-state">Enter a Pokemon to see its Black/White level-up moves.</p>';
+    return;
+  }
+
+  const pokemonEntry = pokemonByName.get(normalizeId(name));
+  if (!pokemonEntry) {
+    els.levelupResults.innerHTML = '<p class="empty-state">Select a Pokemon from the list.</p>';
+    return;
+  }
+
+  const rows = learnsets
+    .filter((entry) => entry.pokemonId === pokemonEntry.dex)
+    .filter((entry) => entry.learnMethod === "level-up" || entry.learnMethod === "evolution")
+    .map((entry) => ({ ...entry, move: moveMap.get(entry.moveId) }))
+    .filter((entry) => entry.move)
+    .sort((a, b) => Number(a.levelLearnedAt ?? 0) - Number(b.levelLearnedAt ?? 0) || a.move.name.localeCompare(b.move.name));
+
+  if (!rows.length) {
+    els.levelupResults.innerHTML = `<p class="empty-state">No Black/White level-up moves found for ${escapeHtml(pokemonEntry.name)}.</p>`;
+    return;
+  }
+
+  els.levelupResults.innerHTML = `
+    <div class="levelup-summary">
+      <strong>${escapeHtml(pokemonEntry.name)}</strong>
+      <span>#${pokemonEntry.dex}</span>
+      ${typeBadges([pokemonEntry.type1, pokemonEntry.type2])}
+      <span>${rows.length} move${rows.length === 1 ? "" : "s"}</span>
+    </div>
+    <div class="levelup-table-wrap">
+      <table class="levelup-table">
+        <thead>
+          <tr>
+            <th>Level</th>
+            <th>Move</th>
+            <th>Type</th>
+            <th>Cat.</th>
+            <th>Power</th>
+            <th>Acc.</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((entry) => levelUpMoveRow(entry)).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function levelUpMoveRow(entry) {
+  const move = entry.move;
+  const level = entry.learnMethod === "evolution" ? `Evo ${entry.levelLearnedAt ?? ""}`.trim() : entry.levelLearnedAt;
+  return `
+    <tr>
+      <td>${escapeHtml(level)}</td>
+      <td>${moveNameHtml(move)}</td>
+      <td>${typeBadges([move.type])}</td>
+      <td>${escapeHtml(capitalize(move.category))}</td>
+      <td>${move.power ?? "-"}</td>
+      <td>${move.accuracy ?? "-"}</td>
+      <td>${move.priority}</td>
+    </tr>
+  `;
 }
 
 function fillTeamCard(card, member, index) {
@@ -500,7 +591,7 @@ function suggestionGroup(title, entries, memberIndex, openByDefault = false) {
     const row = document.createElement("div");
     row.className = "suggestion-row";
     row.innerHTML = `
-      <span>${escapeHtml(entry.move.name)} <small>${learnLabel(entry)}</small></span>
+      <span>${moveNameHtml(entry.move)} <small>${learnLabel(entry)}</small></span>
       <button type="button">Add</button>
     `;
     row.querySelector("button").addEventListener("click", () => addSuggestedMove(memberIndex, entry.move));
@@ -521,6 +612,52 @@ function bindRankedLookup(input, datalist, items, getName) {
   const update = () => updateLookupOptions(datalist, items, input.value, getName);
   input.addEventListener("focus", update);
   input.addEventListener("input", update);
+}
+
+function bindMoveTooltips() {
+  document.addEventListener("pointerover", (event) => {
+    const target = event.target.closest("[data-tooltip]");
+    if (!target) return;
+    showMoveTooltip(target.dataset.tooltip, event.clientX, event.clientY);
+  });
+  document.addEventListener("pointermove", (event) => {
+    if (!els.moveTooltip.hidden) positionMoveTooltip(event.clientX, event.clientY);
+  });
+  document.addEventListener("pointerout", (event) => {
+    if (event.target.closest("[data-tooltip]")) hideMoveTooltip();
+  });
+  document.addEventListener("focusin", (event) => {
+    const target = event.target.closest("[data-tooltip]");
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    showMoveTooltip(target.dataset.tooltip, rect.left, rect.bottom);
+  });
+  document.addEventListener("focusout", (event) => {
+    if (event.target.closest("[data-tooltip]")) hideMoveTooltip();
+  });
+}
+
+function showMoveTooltip(text, x, y) {
+  if (!text) return;
+  els.moveTooltip.textContent = text;
+  els.moveTooltip.hidden = false;
+  positionMoveTooltip(x, y);
+}
+
+function positionMoveTooltip(x, y) {
+  const offset = 14;
+  const margin = 12;
+  const rect = els.moveTooltip.getBoundingClientRect();
+  let left = x + offset;
+  let top = y + offset;
+  if (left + rect.width + margin > window.innerWidth) left = Math.max(margin, x - rect.width - offset);
+  if (top + rect.height + margin > window.innerHeight) top = Math.max(margin, y - rect.height - offset);
+  els.moveTooltip.style.left = `${left}px`;
+  els.moveTooltip.style.top = `${top}px`;
+}
+
+function hideMoveTooltip() {
+  els.moveTooltip.hidden = true;
 }
 
 function updateLookupOptions(datalist, items, query, getName) {
@@ -574,7 +711,7 @@ function renderMoveDropdown(input, dropdown, memberIndex, slot) {
     option.dataset.moveId = move.id;
     option.setAttribute("role", "option");
     option.innerHTML = `
-      <strong>${escapeHtml(move.name)}</strong>
+      ${moveNameHtml(move)}
       <span>${move.type} / ${capitalize(move.category)} / ${move.power ?? "-"} BP / ${move.accuracy ?? "-"}% acc / Priority ${move.priority}</span>
     `;
     option.addEventListener("mousedown", (event) => {
@@ -735,9 +872,6 @@ function renderCatchCalculator() {
     ["net", "Net Ball"],
     ["dive", "Dive Ball"],
     ["repeat", "Repeat Ball"],
-    ["heal", "Heal Ball"],
-    ["luxury", "Luxury Ball"],
-    ["premier", "Premier Ball"],
   ];
   const hpPercent = Number(state.catchSettings.hpPercent) || 25;
   const results = balls.map(([id, name]) => {
@@ -793,7 +927,7 @@ function renderActiveMovePanel() {
   els.activeMovePanel.innerHTML = `
     <div class="best-move-card type-${normalizeId(best.move.type)}">
       <span class="eyebrow">Best move now</span>
-      <strong>${escapeHtml(best.move.name)}</strong>
+      ${moveNameHtml(best.move)}
       <span>${best.move.type} / ${capitalize(best.move.category)} / ${best.move.power ?? "-"} BP / ${best.move.accuracy ?? "-"}% acc</span>
       <span>${effectivenessLabel(best.typeEffectiveness)}${best.stab ? " / STAB" : ""}${best.move.priority > 0 ? " / priority" : ""}</span>
       <span>Score: ${best.score.toFixed(1)}</span>
@@ -858,8 +992,8 @@ function renderTeamRecommendations() {
 function moveStatusHtml(ranked) {
   const status = ranked.status.map((result) => `
     <li>
-      <strong>${escapeHtml(result.move.name)}</strong>
-      <span>${result.move.type} / Status / utility move</span>
+      ${moveNameHtml(result.move)}
+      <span>${result.move.type} / ${utilityMoveLabel(result.move)}</span>
     </li>
   `).join("");
   return `
@@ -928,8 +1062,27 @@ function typeBadges(types) {
     .join(" ");
 }
 
+function moveDescription(move) {
+  return move?.description || move?.effect || "";
+}
+
+function moveTooltipAttr(move) {
+  const description = moveDescription(move);
+  return description ? ` data-tooltip="${escapeAttr(description)}" tabindex="0"` : "";
+}
+
+function moveNameHtml(move) {
+  return `<strong class="move-with-tooltip"${moveTooltipAttr(move)}>${escapeHtml(move.name)}</strong>`;
+}
+
 function moveDetail(move) {
   return `${move.type} / ${capitalize(move.category)} / ${move.power ?? "-"} BP / ${move.accuracy ?? "-"}% acc / Priority ${move.priority}`;
+}
+
+function utilityMoveLabel(move) {
+  if (move.category === "status") return "Status / utility move";
+  if (move.power == null) return `${capitalize(move.category)} / fixed or special damage`;
+  return `${capitalize(move.category)} / utility move`;
 }
 
 function learnLabel(entry) {
