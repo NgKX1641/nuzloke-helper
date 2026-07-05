@@ -1907,17 +1907,17 @@
   {
     "pokemonId": 382,
     "pokemonName": "Kyogre",
-    "captureRate": 3
+    "captureRate": 5
   },
   {
     "pokemonId": 383,
     "pokemonName": "Groudon",
-    "captureRate": 3
+    "captureRate": 5
   },
   {
     "pokemonId": 384,
     "pokemonName": "Rayquaza",
-    "captureRate": 45
+    "captureRate": 3
   },
   {
     "pokemonId": 385,
@@ -2412,12 +2412,12 @@
   {
     "pokemonId": 483,
     "pokemonName": "Dialga",
-    "captureRate": 3
+    "captureRate": 30
   },
   {
     "pokemonId": 484,
     "pokemonName": "Palkia",
-    "captureRate": 3
+    "captureRate": 30
   },
   {
     "pokemonId": 485,
@@ -3212,12 +3212,12 @@
   {
     "pokemonId": 643,
     "pokemonName": "Reshiram",
-    "captureRate": 3
+    "captureRate": 45
   },
   {
     "pokemonId": 644,
     "pokemonName": "Zekrom",
-    "captureRate": 3
+    "captureRate": 45
   },
   {
     "pokemonId": 645,

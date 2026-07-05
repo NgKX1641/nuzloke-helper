@@ -18,7 +18,9 @@ const root = path.resolve(import.meta.dirname, "..");
 const moves = JSON.parse(fs.readFileSync(path.join(root, "src/data/moves.gen5.json"), "utf8"));
 const learnsets = JSON.parse(fs.readFileSync(path.join(root, "src/data/learnsets.black-white.json"), "utf8"));
 const typeChart = JSON.parse(fs.readFileSync(path.join(root, "src/data/typeChart.gen5.json"), "utf8"));
+const captureRates = JSON.parse(fs.readFileSync(path.join(root, "src/data/captureRates.gen5.json"), "utf8"));
 const moveMap = new Map(moves.map((move) => [move.id, move]));
+const captureRateMap = new Map(captureRates.map((entry) => [entry.pokemonId, entry.captureRate]));
 
 function move(id) {
   return moveMap.get(id);
@@ -108,8 +110,23 @@ test("Nest Ball is stronger at low target levels", () => {
   assert.equal(ballModifier("nest", { level: 30 }), 1);
 });
 
+test("Quick Ball uses the Gen 5 first-turn modifier", () => {
+  assert.equal(ballModifier("quick", { turn: 1 }), 5);
+  assert.equal(ballModifier("quick", { turn: 2 }), 1);
+});
+
 test("catch chance improves as HP drops", () => {
   const fullHp = catchChanceGen5({ captureRate: 45, hpPercent: 100, ballBonus: 1, statusBonus: 1 });
   const lowHp = catchChanceGen5({ captureRate: 45, hpPercent: 1, ballBonus: 1, statusBonus: 1 });
   assert.ok(lowHp.chance > fullHp.chance);
+});
+
+test("Gen 5 catch-rate data keeps Black/White historical legendary values", () => {
+  assert.equal(captureRateMap.get(382), 5);
+  assert.equal(captureRateMap.get(383), 5);
+  assert.equal(captureRateMap.get(384), 3);
+  assert.equal(captureRateMap.get(483), 30);
+  assert.equal(captureRateMap.get(484), 30);
+  assert.equal(captureRateMap.get(643), 45);
+  assert.equal(captureRateMap.get(644), 45);
 });

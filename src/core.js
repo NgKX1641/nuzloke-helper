@@ -219,7 +219,7 @@ export function ballModifier(ballId, context = {}) {
     case "net": return context.types?.some((type) => type === "Water" || type === "Bug") ? 3 : 1;
     case "dive": return context.diveBoost ? 3.5 : 1;
     case "dusk": return context.duskBoost ? 3.5 : 1;
-    case "quick": return turn <= 1 ? 4 : 1;
+    case "quick": return turn <= 1 ? 5 : 1;
     case "timer": return Math.min(4, 1 + Math.max(0, turn - 1) * 1229 / 4096);
     case "repeat": return context.repeatBoost ? 3 : 1;
     case "nest": return level <= 29 ? Math.max(1, (41 - level) / 10) : 1;

@@ -45,8 +45,11 @@ Runtime data lives in:
 - `src/data/typeChart.gen5.json`
 - `src/data/moves.gen5.json`
 - `src/data/learnsets.black-white.json`
+- `src/data/captureRates.gen5.json`
 
 `moves.gen5.json` and `learnsets.black-white.json` are generated from PokeAPI CSV data for Gen 5 and the `black-white` version group. The app does not call live APIs during normal usage.
+
+`captureRates.gen5.json` is based on species capture-rate data, with Black/White historical corrections for catch rates that changed in later generations, such as Kyogre, Groudon, Rayquaza, Dialga, Palkia, Reshiram, and Zekrom.
 
 To rebuild move data after downloading the CSV files into `tmp-data`:
 
