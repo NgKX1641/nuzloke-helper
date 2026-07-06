@@ -209,6 +209,15 @@ function bindEvents() {
     saveState();
     renderLevelUpLookup();
   });
+  els.levelupResults.addEventListener("click", (event) => {
+    const button = event.target.closest(".evolution-node-button");
+    if (!button) return;
+    const entry = pokemonByDex.get(Number(button.dataset.pokemonId));
+    if (!entry) return;
+    state.levelupLookup.pokemonName = entry.name;
+    saveState();
+    renderLevelUpLookup();
+  });
   els.openSettings.addEventListener("click", () => {
     els.settingsDialog.showModal();
   });
@@ -414,19 +423,23 @@ function evolutionChartHtml(chain, activePokemonId) {
 function evolutionNodeHtml(node, activePokemonId) {
   const pokemonEntry = pokemonByDex.get(node.pokemonId);
   const types = pokemonEntry ? typeBadges([pokemonEntry.type1, pokemonEntry.type2]) : "";
+  const nodeContent = `
+    <strong>${escapeHtml(node.name)}</strong>
+    <span>#${node.pokemonId}</span>
+    <span>${types}</span>
+  `;
   const branches = (node.evolvesTo || []).map((edge) => `
     <div class="evolution-branch">
       <div class="evolution-condition">${escapeHtml(edge.condition || edge.method || "Evolves")}</div>
       ${evolutionNodeHtml(edge.pokemon, activePokemonId)}
     </div>
   `).join("");
+  const isActive = node.pokemonId === activePokemonId;
   return `
     <div class="evolution-node-wrap">
-      <div class="evolution-node${node.pokemonId === activePokemonId ? " active" : ""}">
-        <strong>${escapeHtml(node.name)}</strong>
-        <span>#${node.pokemonId}</span>
-        <span>${types}</span>
-      </div>
+      ${isActive
+        ? `<div class="evolution-node active" aria-current="true">${nodeContent}</div>`
+        : `<button class="evolution-node evolution-node-button" type="button" data-pokemon-id="${node.pokemonId}" aria-label="Show ${escapeAttr(node.name)} in Pokedex">${nodeContent}</button>`}
       ${branches ? `<div class="evolution-branches">${branches}</div>` : ""}
     </div>
   `;

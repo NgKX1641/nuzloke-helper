@@ -542,6 +542,18 @@ textarea {
   padding: 0.55rem;
 }
 
+.evolution-node-button {
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.evolution-node-button:hover,
+.evolution-node-button:focus-visible {
+  border-color: var(--accent);
+  background: var(--button-muted-hover);
+}
+
 .evolution-node.active {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
