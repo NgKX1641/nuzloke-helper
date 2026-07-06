@@ -45,32 +45,37 @@ let typeChart = null;
 let moves = [];
 let learnsets = [];
 let captureRates = [];
+let evolutionChains = [];
 let pokemonByName = new Map();
 let pokemonByDex = new Map();
 let moveByName = new Map();
 let moveMap = new Map();
 let captureRateByPokemonId = new Map();
+let evolutionChainByPokemonId = new Map();
 
 const els = {};
 
 async function loadData() {
-  const [pokemonData, chartData, movesData, learnsetData, captureRateData] = await Promise.all([
+  const [pokemonData, chartData, movesData, learnsetData, captureRateData, evolutionChainData] = await Promise.all([
     fetch("./src/data/pokemon.gen5.json").then((response) => response.json()),
     fetch("./src/data/typeChart.gen5.json").then((response) => response.json()),
     fetch("./src/data/moves.gen5.json").then((response) => response.json()),
     fetch("./src/data/learnsets.black-white.json").then((response) => response.json()),
     fetch("./src/data/captureRates.gen5.json").then((response) => response.json()),
+    fetch("./src/data/evolutionChains.gen5.json").then((response) => response.json()),
   ]);
   pokemon = pokemonData;
   typeChart = chartData;
   moves = movesData;
   learnsets = learnsetData;
   captureRates = captureRateData;
+  evolutionChains = evolutionChainData;
   pokemonByName = new Map(pokemon.map((entry) => [normalizeId(entry.name), entry]));
   pokemonByDex = new Map(pokemon.map((entry) => [entry.dex, entry]));
   moveByName = new Map(moves.map((move) => [normalizeId(move.name), move]));
   moveMap = new Map(moves.map((move) => [move.id, move]));
   captureRateByPokemonId = new Map(captureRates.map((entry) => [entry.pokemonId, entry.captureRate]));
+  evolutionChainByPokemonId = new Map(evolutionChains.map((entry) => [entry.pokemonId, entry.chain]));
 }
 
 function cacheEls() {
@@ -361,7 +366,7 @@ function renderLevelUpLookup() {
   const name = state.levelupLookup.pokemonName || "";
   els.levelupPokemon.value = name;
   if (!name.trim()) {
-    els.levelupResults.innerHTML = '<p class="empty-state">Enter a Pokemon to see its Black/White level-up moves.</p>';
+    els.levelupResults.innerHTML = '<p class="empty-state">Enter a Pokemon to see its Pokedex details.</p>';
     return;
   }
 
@@ -378,10 +383,7 @@ function renderLevelUpLookup() {
     .filter((entry) => entry.move)
     .sort((a, b) => Number(a.levelLearnedAt ?? 0) - Number(b.levelLearnedAt ?? 0) || a.move.name.localeCompare(b.move.name));
 
-  if (!rows.length) {
-    els.levelupResults.innerHTML = `<p class="empty-state">No Black/White level-up moves found for ${escapeHtml(pokemonEntry.name)}.</p>`;
-    return;
-  }
+  const evolutionChain = evolutionChainByPokemonId.get(pokemonEntry.dex);
 
   els.levelupResults.innerHTML = `
     <div class="levelup-summary">
@@ -390,6 +392,48 @@ function renderLevelUpLookup() {
       ${typeBadges([pokemonEntry.type1, pokemonEntry.type2])}
       <span>${rows.length} move${rows.length === 1 ? "" : "s"}</span>
     </div>
+    ${evolutionChain ? evolutionChartHtml(evolutionChain, pokemonEntry.dex) : ""}
+    ${rows.length ? levelUpMoveTableHtml(rows) : `<p class="empty-state">No Black/White level-up moves found for ${escapeHtml(pokemonEntry.name)}.</p>`}
+  `;
+}
+
+function evolutionChartHtml(chain, activePokemonId) {
+  return `
+    <section class="evolution-section" aria-label="Evolution chart">
+      <div class="subheading">
+        <strong>Evolution chart</strong>
+        <span>Gen 5 species data.</span>
+      </div>
+      <div class="evolution-chart">
+        ${evolutionNodeHtml(chain, activePokemonId)}
+      </div>
+    </section>
+  `;
+}
+
+function evolutionNodeHtml(node, activePokemonId) {
+  const pokemonEntry = pokemonByDex.get(node.pokemonId);
+  const types = pokemonEntry ? typeBadges([pokemonEntry.type1, pokemonEntry.type2]) : "";
+  const branches = (node.evolvesTo || []).map((edge) => `
+    <div class="evolution-branch">
+      <div class="evolution-condition">${escapeHtml(edge.condition || edge.method || "Evolves")}</div>
+      ${evolutionNodeHtml(edge.pokemon, activePokemonId)}
+    </div>
+  `).join("");
+  return `
+    <div class="evolution-node-wrap">
+      <div class="evolution-node${node.pokemonId === activePokemonId ? " active" : ""}">
+        <strong>${escapeHtml(node.name)}</strong>
+        <span>#${node.pokemonId}</span>
+        <span>${types}</span>
+      </div>
+      ${branches ? `<div class="evolution-branches">${branches}</div>` : ""}
+    </div>
+  `;
+}
+
+function levelUpMoveTableHtml(rows) {
+  return `
     <div class="levelup-table-wrap">
       <table class="levelup-table">
         <thead>

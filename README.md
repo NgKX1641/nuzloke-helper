@@ -6,6 +6,7 @@ A local, offline-first Gen 5 battle helper for Pokemon Black/White randomized Nu
 
 - Save up to six team members in `localStorage`.
 - Auto-fill normal Gen 5 Pokemon types, with manual overrides for randomized type runs.
+- Show each Pokemon's Gen 5 evolution chart in the Pokedex lookup.
 - Track each Pokemon's actual current moveset with zero to four confirmed moves.
 - Suggest Black/White learnable moves by level, evolution, TM/HM, and tutor data without adding them automatically.
 - Rank only the selected current damaging moves against the opponent.
@@ -46,13 +47,22 @@ Runtime data lives in:
 - `src/data/moves.gen5.json`
 - `src/data/learnsets.black-white.json`
 - `src/data/captureRates.gen5.json`
+- `src/data/evolutionChains.gen5.json`
 
 `moves.gen5.json` and `learnsets.black-white.json` are generated from PokeAPI CSV data for Gen 5 and the `black-white` version group. The app does not call live APIs during normal usage.
 
 `captureRates.gen5.json` is based on species capture-rate data, with Black/White historical corrections for catch rates that changed in later generations, such as Kyogre, Groudon, Rayquaza, Dialga, Palkia, Reshiram, and Zekrom.
 
+`evolutionChains.gen5.json` is generated from PokeAPI species and evolution CSV data, filtered to Gen 5 Pokemon.
+
 To rebuild move data after downloading the CSV files into `tmp-data`:
 
 ```powershell
 node .\tools\build-move-data.js
+```
+
+To rebuild evolution data directly from PokeAPI CSV files:
+
+```powershell
+node .\tools\build-evolution-data.js
 ```

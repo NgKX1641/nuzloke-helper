@@ -19,8 +19,10 @@ const moves = JSON.parse(fs.readFileSync(path.join(root, "src/data/moves.gen5.js
 const learnsets = JSON.parse(fs.readFileSync(path.join(root, "src/data/learnsets.black-white.json"), "utf8"));
 const typeChart = JSON.parse(fs.readFileSync(path.join(root, "src/data/typeChart.gen5.json"), "utf8"));
 const captureRates = JSON.parse(fs.readFileSync(path.join(root, "src/data/captureRates.gen5.json"), "utf8"));
+const evolutionChains = JSON.parse(fs.readFileSync(path.join(root, "src/data/evolutionChains.gen5.json"), "utf8"));
 const moveMap = new Map(moves.map((move) => [move.id, move]));
 const captureRateMap = new Map(captureRates.map((entry) => [entry.pokemonId, entry.captureRate]));
+const evolutionChainMap = new Map(evolutionChains.map((entry) => [entry.pokemonId, entry.chain]));
 
 function move(id) {
   return moveMap.get(id);
@@ -134,4 +136,18 @@ test("Gen 5 catch-rate data keeps Black/White historical legendary values", () =
   assert.equal(captureRateMap.get(484), 30);
   assert.equal(captureRateMap.get(643), 45);
   assert.equal(captureRateMap.get(644), 45);
+});
+
+test("evolution chart data maps each Pokemon to its full chain", () => {
+  const samurottChain = evolutionChainMap.get(503);
+  assert.equal(samurottChain.name, "Oshawott");
+  assert.equal(samurottChain.evolvesTo[0].pokemon.name, "Dewott");
+  assert.equal(samurottChain.evolvesTo[0].pokemon.evolvesTo[0].pokemon.name, "Samurott");
+});
+
+test("evolution chart data keeps Gen 5 Unova location methods", () => {
+  const magnetonChain = evolutionChainMap.get(82);
+  const magneton = magnetonChain.evolvesTo[0].pokemon;
+  assert.equal(magneton.evolvesTo[0].pokemon.name, "Magnezone");
+  assert.equal(magneton.evolvesTo[0].condition, "at Chargestone Cave");
 });
